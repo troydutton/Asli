@@ -25,7 +25,22 @@ def load_data(data_dir):
     be a list of integer labels, representing the categories for each of the
     corresponding 'images'.
     """
-    pass
+    images = []
+    labels = []
+    for i in range(NUM_CATEGORIES):
+        #sub_dir Ex: gtsrb\21
+        os.system('cls')
+        print(f"Accessing subdirectory {i+1}/{NUM_CATEGORIES}")
+        sub_dir = os.path.join(data_dir, str(i))
+        for filename in os.listdir(sub_dir):
+            #Load the image as a 'numpy.ndarry'
+            img = cv2.imread(os.path.join(sub_dir, filename))
+            #Resize the image
+            img = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
+            #Add the image and its label to the data lists
+            images.append(img)
+            labels.append(i)
+    return (images, labels)
 
 
 if __name__ == "__main__":
