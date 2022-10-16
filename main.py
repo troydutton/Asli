@@ -72,10 +72,10 @@ def main():
                 w = botRight[0] - topLeft[0]
                 h = botRight[1] - topLeft[1]
 
-                topLeft[0] -= int(w * .1)
-                topLeft[1] -= int(h * .1)
-                botRight[0] += int(w * .1)
-                botRight[1] += int(h * .1)
+                topLeft[0] -= int(w * .15)
+                topLeft[1] -= int(h * .15)
+                botRight[0] += int(w * .15)
+                botRight[1] += int(h * .15)
 
                 w = botRight[0] - topLeft[0]
                 h = botRight[1] - topLeft[1]
@@ -96,7 +96,7 @@ def main():
             else:
                 last_prediction = cur_prediction
 
-            if (len(gray) > 0):
+            if (len(gray) > 0 and gray is not None):
                 cv2.imshow("Hand", gray)
                     
         cv2.imshow("Image", img)
