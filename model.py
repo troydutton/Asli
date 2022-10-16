@@ -7,7 +7,7 @@ import openpyxl
 
 from sklearn.model_selection import train_test_split
 
-EPOCHS = 5 
+EPOCHS = 8
 IMG_WIDTH = 28
 IMG_HEIGHT = 28
 NUM_CATEGORIES = 25

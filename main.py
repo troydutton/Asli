@@ -1,7 +1,5 @@
 # Data manipulation
-import math
-from tkinter import W, Toplevel
-from cv2 import FONT_HERSHEY_PLAIN
+import string
 import numpy as np
 # Image processing
 import cv2
@@ -12,12 +10,8 @@ import tensorflow as tf
 
 INTERNAL_DISPLAY = 0
 EXIT_KEY = 27
-GREEN_COLOR = (0, 224, 0)
 BLACK_COLOR = (0, 0, 0)
-RED_COLOR = (0, 0, 255)
-BLUE_COLOR = (237, 162, 0)
-MIN_DIST = 15
-MAX_DIST = 115
+ALPHABET = list(string.ascii_lowercase)
 
 
 
@@ -43,6 +37,8 @@ def main():
 
         # Get hand landmarks
         results = detector.detectHands(img, False)
+
+        last_prediction = None
 
         if results.multi_hand_landmarks:
             #Iterate through all detected hands
@@ -78,10 +74,10 @@ def main():
                 w = botRight[0] - topLeft[0]
                 h = botRight[1] - topLeft[1]
 
-                topLeft[0] -= int(w * .15)
-                topLeft[1] -= int(h * .15)
-                botRight[0] += int(w * .15)
-                botRight[1] += int(h * .15)
+                topLeft[0] -= int(w * .1)
+                topLeft[1] -= int(h * .1)
+                botRight[0] += int(w * .1)
+                botRight[1] += int(h * .1)
 
                 w = botRight[0] - topLeft[0]
                 h = botRight[1] - topLeft[1]
@@ -92,23 +88,17 @@ def main():
 
                 gray = cv2.resize(gray, (28, 28))
                 cv2.rectangle(img, topLeft, botRight, BLACK_COLOR, 2)
+
+            cur_prediction = ALPHABET[model.predict(np.array(gray).reshape((-1, 28, 28, 1)).astype(np.uint8)).argmax()]
+
             if (len(gray) > 0):
                 cv2.imshow("Hand", gray)
-                print(model.predict(np.array(gray).reshape((-1, 28, 28, 1)).astype(np.uint8)).argmax())
-                
-
-        else:
-            # Reflect any changes made by the system
-            pass
-        
-        # Brightness
-        #cv2.rectangle(img, (10, 10), (50, 110), BLACK_COLOR, 2)
-        #cv2.rectangle(img, (11, int(110 - brightness)), (49, 109), BLUE_COLOR, cv2.FILLED)
-        #cv2.putText(img, "Light", (10, 130), FONT_HERSHEY_PLAIN, 1, BLUE_COLOR, 2)
-        # Volume
-        #cv2.rectangle(img, (60, 10), (110, 110), BLACK_COLOR, 2)
-        #cv2.rectangle(img, (61, int(110 - volume)), (109, 109), RED_COLOR, cv2.FILLED)
-        #cv2.putText(img, "Volume", (60, 130), FONT_HERSHEY_PLAIN, 1, RED_COLOR, 2)
+                if (last_prediction is not None):
+                    if (last_prediction != cur_prediction):
+                        last_prediction = cur_prediction
+                        print(cur_prediction)
+                else:
+                    last_prediction = cur_prediction
                     
         cv2.imshow("Image", img)
         if (cv2.waitKey(1) & 0xFF == EXIT_KEY):
