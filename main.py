@@ -24,6 +24,9 @@ def main():
 
     # Initialize video feed
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    
+    # When we start, we have no last prediction
+    last_prediction = None
 
     while (cap.isOpened()):
         success, img = cap.read()
@@ -31,14 +34,9 @@ def main():
         if not success:
             print("Frame not loaded")
             break
-        
-        # Flip the image horizontally
-        og_img = img
 
         # Get hand landmarks
         results = detector.detectHands(img, False)
-
-        last_prediction = None
 
         if results.multi_hand_landmarks:
             #Iterate through all detected hands
@@ -82,7 +80,7 @@ def main():
                 w = botRight[0] - topLeft[0]
                 h = botRight[1] - topLeft[1]
 
-                hand_img = og_img[topLeft[1]: topLeft[1] + h, topLeft[0]:topLeft[0] + w]
+                hand_img = img[topLeft[1]: topLeft[1] + h, topLeft[0]:topLeft[0] + w]
 
                 gray = cv2.cvtColor(hand_img, cv2.COLOR_BGR2GRAY)
 
@@ -91,14 +89,15 @@ def main():
 
             cur_prediction = ALPHABET[model.predict(np.array(gray).reshape((-1, 28, 28, 1)).astype(np.uint8)).argmax()]
 
+            if (last_prediction is not None):
+                if (last_prediction != cur_prediction):
+                    last_prediction = cur_prediction
+                    print(cur_prediction)
+            else:
+                last_prediction = cur_prediction
+
             if (len(gray) > 0):
                 cv2.imshow("Hand", gray)
-                if (last_prediction is not None):
-                    if (last_prediction != cur_prediction):
-                        last_prediction = cur_prediction
-                        print(cur_prediction)
-                else:
-                    last_prediction = cur_prediction
                     
         cv2.imshow("Image", img)
         if (cv2.waitKey(1) & 0xFF == EXIT_KEY):
