@@ -5,8 +5,6 @@ import sys
 import tensorflow as tf
 import openpyxl
 
-from sklearn.model_selection import train_test_split
-
 EPOCHS = 8
 IMG_WIDTH = 28
 IMG_HEIGHT = 28
@@ -21,10 +19,6 @@ def main():
 
     # Split data into training and testing sets
     training_labels = tf.keras.utils.to_categorical(training_labels, NUM_CATEGORIES).astype(np.uint8)
-
-    #x_train, x_test, y_train, y_test = train_test_split(
-    #    np.array(images), np.array(labels), test_size=1
-    #)
 
     # Get the model
     model = get_model()

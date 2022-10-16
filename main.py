@@ -81,23 +81,28 @@ def main():
                 h = botRight[1] - topLeft[1]
 
                 hand_img = img[topLeft[1]: topLeft[1] + h, topLeft[0]:topLeft[0] + w]
+                if (len(hand_img) > 0 and hand_img is not None):
+                    hand_img = cv2.cvtColor(hand_img, cv2.COLOR_BGR2GRAY)
 
-                gray = cv2.cvtColor(hand_img, cv2.COLOR_BGR2GRAY)
+                    hand_img = cv2.resize(hand_img, (28, 28))
 
-                gray = cv2.resize(gray, (28, 28))
-                cv2.rectangle(img, topLeft, botRight, BLACK_COLOR, 2)
+                    cv2.imwrite("AAAAA.png", hand_img)
 
-            cur_prediction = ALPHABET[model.predict(np.array(gray).reshape((-1, 28, 28, 1)).astype(np.uint8)).argmax()]
+                    cv2.rectangle(img, topLeft, botRight, BLACK_COLOR, 2)
 
-            if (last_prediction is not None):
-                if (last_prediction != cur_prediction):
-                    last_prediction = cur_prediction
-                    print(cur_prediction)
-            else:
-                last_prediction = cur_prediction
+                    cur_prediction = ALPHABET[model.predict(np.array(hand_img).reshape((-1, 28, 28, 1)).astype(np.uint8)).argmax()]
 
-            if (len(gray) > 0 and gray is not None):
-                cv2.imshow("Hand", gray)
+                    if (last_prediction is not None):
+                        if (last_prediction != cur_prediction):
+                            last_prediction = cur_prediction
+                            if (cur_prediction == 'y'):
+                                print("shout out to my barber")
+                            else:
+                                print(cur_prediction)
+                    else:
+                        last_prediction = cur_prediction
+                    
+                    cv2.imshow("Hand", hand_img)
                     
         cv2.imshow("Image", img)
         if (cv2.waitKey(1) & 0xFF == EXIT_KEY):
