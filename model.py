@@ -1,35 +1,30 @@
 import cv2
 import numpy as np
-import os
-import sys
 import tensorflow as tf
-import openpyxl
+from sklearn.model_selection import train_test_split
+import os, sys
 
 EPOCHS = 8
-IMG_WIDTH = 28
-IMG_HEIGHT = 28
-NUM_CATEGORIES = 25
-TEST_DATA_PATH = "data\\sign_mnist_test.xlsx"
-TRAIN_DATA_PATH = "data\\sign_mnist_train.xlsx"
-
+IMG_WIDTH = 200
+IMG_HEIGHT = 200
+NUM_CATEGORIES = 26
+DATA_DIR = "data\\asl_alphabet_train"
 
 def main():
-    # Get image arrays and labels for training
-    training_images, training_labels = load_data(TRAIN_DATA_PATH)
+    # Get image arrays and labels
+    images, labels = load_data(DATA_DIR)
 
     # Split data into training and testing sets
-    training_labels = tf.keras.utils.to_categorical(training_labels, NUM_CATEGORIES).astype(np.uint8)
-
+    labels = tf.keras.utils.to_categorical(labels)
+    training_images, testing_images, training_labels, testing_labels = train_test_split(
+        np.array(images), np.array(labels), test_size=.4
+    )
     # Get the model
     model = get_model()
 
     # Fit model on training data
-    model.fit(np.array(training_images), np.array(training_labels), epochs=EPOCHS)
+    model.fit(training_images, training_labels, epochs=EPOCHS)
 
-    # Get image arrays and labels for testing
-    testing_images, testing_labels = load_data(TEST_DATA_PATH)
-
-    testing_labels = tf.keras.utils.to_categorical(testing_labels)
 
     # Evaluate neural network performance
     model.evaluate(testing_images,  testing_labels, verbose=2)
@@ -51,7 +46,7 @@ def get_model():
     model = tf.keras.models.Sequential(
         [   
             #Convolutional layer
-            tf.keras.layers.Conv2D(32, (2, 2), input_shape=(IMG_WIDTH, IMG_HEIGHT, 1), activation = "relu"),
+            tf.keras.layers.Conv2D(32, (2, 2), input_shape=(IMG_WIDTH, IMG_HEIGHT, 3), activation = "relu"),
             tf.keras.layers.Conv2D(64, (2, 2), activation = "relu"),
             #Poolin
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
@@ -93,23 +88,21 @@ def load_data(data_dir):
     """
     images = []
     labels = []
-    # numrows, numcols
-    from openpyxl import load_workbook
-    wb_obj = load_workbook(data_dir)
-    sheet_obj = wb_obj.active
-    numrows = sheet_obj.max_row
-    numcolumns = sheet_obj.max_column
-    # note: the row and column numbers start at 1
-    os.system('cls')
-    #have two for loops, one that sto,res the label number, and the other 
-    #that parses through the row
-    for i in range(2, numrows + 1):
-        labels.append(sheet_obj.cell(row=i, column=1).value)
-        image = []
-        for u in range (2, numcolumns + 1):
-            image.append(sheet_obj.cell(row=i, column=u).value)
-        images.append(np.array(image))
-    return (np.array(images).reshape((-1, 28, 28, 1)).astype(np.uint8), labels)
+    j = 0
+    for i in range(ord('A'), ord('Z') + 1):
+        os.system('cls')
+        print(f"Accessing subdirectory {chr(i)}/Z")
+        sub_dir = os.path.join(data_dir, chr(i))
+        for filename in os.listdir(sub_dir):
+            #Load the image as a 'numpy.ndarry'
+            img = cv2.imread(os.path.join(sub_dir, filename))
+            #Resize the image
+            img = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
+            #Add the image and its label to the data lists
+            images.append(img)
+            labels.append(j)
+        j += 1
+    return (images, labels)
 
 
 if __name__ == "__main__":
