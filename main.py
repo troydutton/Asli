@@ -11,16 +11,16 @@ import tensorflow as tf
 INTERNAL_DISPLAY = 0
 EXIT_KEY = 27
 BLACK_COLOR = (0, 0, 0)
+IMG_WIDTH = 200
+IMG_HEIGHT = 200
 ALPHABET = list(string.ascii_lowercase)
-
-
 
 def main():
     # Initialize hand detection module
     detector = handDetector.handDetector(detection_confidence=.6, max_hands=1, tracking_confidence=.6, model_complexity=1)
 
     # Load model
-    model = tf.keras.models.load_model("model.h5")
+    model = tf.keras.models.load_model("new_model.h5")
 
     # Initialize video feed
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -82,15 +82,10 @@ def main():
 
                 hand_img = img[topLeft[1]: topLeft[1] + h, topLeft[0]:topLeft[0] + w]
                 if (len(hand_img) > 0 and hand_img is not None):
-                    hand_img = cv2.cvtColor(hand_img, cv2.COLOR_BGR2GRAY)
 
-                    hand_img = cv2.resize(hand_img, (28, 28))
+                    hand_img = cv2.resize(hand_img, (IMG_WIDTH, IMG_HEIGHT))
 
-                    cv2.imwrite("AAAAA.png", hand_img)
-
-                    cv2.rectangle(img, topLeft, botRight, BLACK_COLOR, 2)
-
-                    cur_prediction = ALPHABET[model.predict(np.array(hand_img).reshape((-1, 28, 28, 1)).astype(np.uint8)).argmax()]
+                    cur_prediction = ALPHABET[model.predict(np.array(hand_img).reshape((-1, IMG_WIDTH, IMG_HEIGHT, 3))).argmax()]
 
                     if (last_prediction is not None):
                         if (last_prediction != cur_prediction):
