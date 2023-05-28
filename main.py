@@ -4,7 +4,7 @@ import numpy as np
 # Image processing
 import cv2
 # Hand Tracking
-import handDetector
+import Detector
 # Model
 import tensorflow as tf
 
@@ -17,7 +17,7 @@ ALPHABET = list(string.ascii_lowercase)
 
 def main():
     # Initialize hand detection module
-    detector = handDetector.handDetector(detection_confidence=.6, max_hands=1, tracking_confidence=.6, model_complexity=1)
+    detector = Detector.handDetector(detection_confidence=.6, max_hands=1, tracking_confidence=.6, model_complexity=1)
 
     # Load model
     model = tf.keras.models.load_model("new_model.h5")

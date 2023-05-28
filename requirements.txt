@@ -1,4 +1,5 @@
 opencv-python
+mediapipe
 scikit-learn
 tensorflow
 openpyxl
