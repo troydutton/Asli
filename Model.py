@@ -12,11 +12,14 @@ class Model(nn.Module):
             nn.ReLU(),
             nn.Linear(128, 256),
             nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(256, 512),
+            nn.Dropout(dropout),
             nn.ReLU()
         )
 
         self.head = nn.Sequential(
-            nn.Linear(256, output_classes),
+            nn.Linear(512, output_classes),
             nn.Softmax(dim=-1)
         )
 
@@ -24,6 +27,15 @@ class Model(nn.Module):
         x = self.stem(x)
         x = self.head(x)
         return x
+
+    def initWeights(self, layer):
+        if isinstance(layer, nn.Linear):
+            if layer.bias is not None:
+                nn.init.zeros_(layer.bias)
+            if any(layer is head_layer for head_layer in self.head): # Classifier Head - init for softmax
+                nn.init.xavier_uniform_(layer.weight, gain=1.0)
+            else: # Normal linear layer
+                nn.init.xavier_uniform_(layer.weight)
 
     def saveWeights(self, path: str) -> None:
         """Save model weights to a file path"""
