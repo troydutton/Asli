@@ -5,8 +5,6 @@ from tqdm import tqdm
 from PIL import Image
 
 import mediapipe as mp
-from mediapipe.python.solutions import drawing_utils, drawing_styles, hands
-
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import HandLandmarkerOptions, HandLandmarker
 
@@ -41,10 +39,10 @@ class ASLDataset(Dataset):
                 # Create a path to the file
                 file_path = os.path.join(directory_path, file)
 
-                # Load the image
+                # Load the image using Pillow
                 with Image.open(file_path) as f:
                     # Convert image to numpy array
-                    image = np.array(f)
+                    image = np.asarray(f)
 
                     # Save the image and label together
                     self.images.append(image)
@@ -85,7 +83,7 @@ def generateLandmarkData(dataset: ASLDataset) -> (np.ndarray, np.ndarray):
     """
     # Load hand detection model
     detector = HandLandmarker.create_from_options(
-        HandLandmarkerOptions(BaseOptions(model_asset_path='hand_landmarker.task'), num_hands=2))
+        HandLandmarkerOptions(BaseOptions(model_asset_path='hand_landmarker.task'), num_hands=1))
 
     landmarks = []
     labels = []
@@ -107,22 +105,27 @@ def generateLandmarkData(dataset: ASLDataset) -> (np.ndarray, np.ndarray):
     return np.array(landmarks), np.array(labels)
 
 
-def validateModel(model: nn.Module, test_data: DataLoader):
+def calculateModelAccuracy(model: nn.Module, test_data: DataLoader) -> float:
     correct_predictions = 0
 
     model.eval()
 
     with torch.no_grad():
-        for landmark, gt_label in test_data:
+        for landmarks, gt_labels in test_data:
             # Send batch to device
-            landmark = landmark.to(device)
-            gt_label = gt_label.to(device)
+            landmarks = landmarks.to(device)
+            gt_labels = gt_labels.to(device)
 
             # Predict
-            predicted_label = model(landmark)
+            predicted_logits = model(landmarks)
 
-            # Calculate batch accuracy
-            correct_predictions += np.count_nonzero(predicted_label == gt_label)
+            # Choose the most probable label
+            predicted_labels = torch.argmax(predicted_logits, dim=-1)
+
+            # Add the number of correct predictions
+            correct_predictions += torch.count_nonzero(predicted_labels == gt_labels)
+
+    return correct_predictions / len(test_data.dataset)
 
 
 def train(model: nn.Module, train_data: DataLoader, test_data: DataLoader, epochs: int) -> None:
@@ -133,7 +136,7 @@ def train(model: nn.Module, train_data: DataLoader, test_data: DataLoader, epoch
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     # Initialize tensorboard logging
-    log = SummaryWriter("./logs/Generic Test")
+    log = SummaryWriter("./logs/Landmark V1.0")
     for epoch in tqdm(range(epochs)):
         model.train()
 
@@ -162,7 +165,7 @@ def train(model: nn.Module, train_data: DataLoader, test_data: DataLoader, epoch
         log.add_scalar("Loss", epoch_loss / num_batches, epoch)
 
         # Log epoch accuracy
-        log.add_scalar("Validation Accuracy", validateModel(model, test_data))
+        log.add_scalar("Validation Accuracy", calculateModelAccuracy(model, test_data), epoch)
 
     log.close()
 
@@ -177,8 +180,22 @@ train_size = int(0.9 * len(dataset))
 test_size = len(dataset) - train_size
 train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
+# Create model
+model = Model(input_features=63, output_classes=26, dropout=0.15)
+
+# Initialize model weights
+model.apply(model.initWeights)
+
+# Send model to device
+model.to(device)
+
 # Train Model
-train(model=Model(input_features=63, output_classes=26, dropout=0.15).to(device),
+train(model=model,
       train_data=DataLoader(train_dataset, batch_size=1000),
       test_data=DataLoader(test_dataset, batch_size=1000),
-      epochs=1000)
+      epochs=3000)
+
+# Save model weights
+model.saveWeights("models/Landmark v1.0.pt")
+
+
