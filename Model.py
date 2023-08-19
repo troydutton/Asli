@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 
@@ -23,3 +24,11 @@ class Model(nn.Module):
         x = self.stem(x)
         x = self.head(x)
         return x
+
+    def saveWeights(self, path: str) -> None:
+        """Save model weights to a file path"""
+        torch.save(self.state_dict(), path)
+
+    def loadWeights(self, path: str) -> None:
+        """Load model weights from a file path"""
+        self.load_state_dict(torch.load(path))
