@@ -1,8 +1,11 @@
 import os
 import h5py
+import string
 import numpy as np
 from tqdm import tqdm
 from PIL import Image
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 import mediapipe as mp
 from mediapipe.tasks.python import BaseOptions
@@ -105,16 +108,17 @@ def generateLandmarkData(dataset: ASLDataset) -> (np.ndarray, np.ndarray):
     return np.array(landmarks), np.array(labels)
 
 
-def calculateModelAccuracy(model: nn.Module, test_data: DataLoader) -> float:
+def calculateModelAccuracy(model: nn.Module, test_data: DataLoader) -> (float, np.ndarray):
     correct_predictions = 0
 
     model.eval()
+
+    conf_matrix = np.zeros((26, 26))
 
     with torch.no_grad():
         for landmarks, gt_labels in test_data:
             # Send batch to device
             landmarks = landmarks.to(device)
-            gt_labels = gt_labels.to(device)
 
             # Predict
             predicted_logits = model(landmarks)
@@ -122,10 +126,45 @@ def calculateModelAccuracy(model: nn.Module, test_data: DataLoader) -> float:
             # Choose the most probable label
             predicted_labels = torch.argmax(predicted_logits, dim=-1)
 
+            # Bring back from device
+            predicted_labels = predicted_labels.cpu()
+
             # Add the number of correct predictions
             correct_predictions += torch.count_nonzero(predicted_labels == gt_labels)
 
-    return correct_predictions / len(test_data.dataset)
+            # Generate the confusion matrix for the batch
+            batch_conf_matrix = confusion_matrix(y_true=gt_labels, y_pred=predicted_labels)
+
+            # Apply to overall confusion matrix
+            conf_matrix += batch_conf_matrix
+
+    # Return average accuracy and overall confusion matrix
+    return correct_predictions / len(test_data.dataset), conf_matrix
+
+
+def displayConfusionMatrix(conf_matrix: np.ndarray) -> plt.Figure:
+    """Create a pyplot figure to log matrices to tensorboard."""
+
+    # Create the figure
+    num_classes = conf_matrix.shape[0]
+    fig, ax = plt.subplots(figsize=(12, 12))
+    ax.matshow(conf_matrix)
+
+    # Add axis labels
+    ax.set_xticks(np.arange(num_classes))
+    ax.set_yticks(np.arange(num_classes))
+    ax.set_xticklabels(list(string.ascii_uppercase))
+    ax.set_yticklabels(list(string.ascii_uppercase))
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+
+    # Add text values
+    for i in range(num_classes):
+        for j in range(num_classes):
+            ax.text(j, i, conf_matrix[i, j], ha="center", va="center")
+
+    return fig
+
 
 
 def train(model: nn.Module, train_data: DataLoader, test_data: DataLoader, epochs: int) -> None:
@@ -164,8 +203,13 @@ def train(model: nn.Module, train_data: DataLoader, test_data: DataLoader, epoch
         # Log epoch loss
         log.add_scalar("Loss", epoch_loss / num_batches, epoch)
 
+        accuracy, conf_matrix = calculateModelAccuracy(model, test_data)
+
         # Log epoch accuracy
-        log.add_scalar("Validation Accuracy", calculateModelAccuracy(model, test_data), epoch)
+        log.add_scalar("Validation Accuracy", accuracy, epoch)
+
+        # Log epoch confusion matrix
+        log.add_figure("Confusion Matrix", displayConfusionMatrix(conf_matrix), epoch)
 
     log.close()
 
@@ -192,10 +236,8 @@ model.to(device)
 # Train Model
 train(model=model,
       train_data=DataLoader(train_dataset, batch_size=1000),
-      test_data=DataLoader(test_dataset, batch_size=1000),
+      test_data=DataLoader(test_dataset, batch_size=len(test_dataset)),
       epochs=3000)
 
 # Save model weights
 model.saveWeights("models/Landmark v1.0.pt")
-
-
