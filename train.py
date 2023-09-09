@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from PIL import Image
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix
 
 import mediapipe as mp
 from mediapipe.tasks.python import BaseOptions
@@ -80,9 +80,9 @@ class LandmarkDataset(Dataset):
         return self.landmarks[idx], self.labels[idx]
 
 
-def generateLandmarkData(dataset: ASLDataset) -> (np.ndarray, np.ndarray):
+def generateLandmarkDataset(dataset: Dataset, path: str = '/data/train.h5') -> None:
     """
-    Convert a generic image dataset into a set of landmark positions
+    Convert a generic image dataset into a set of landmark positions and save it to the provided path.
     """
     # Load hand detection model
     detector = HandLandmarker.create_from_options(
@@ -105,7 +105,10 @@ def generateLandmarkData(dataset: ASLDataset) -> (np.ndarray, np.ndarray):
                 landmarks.extend([landmark.x, landmark.y, landmark.z])
             labels.append(label)
 
-    return np.array(landmarks), np.array(labels)
+    # Save landmarks & labels
+    with h5py.File(path, 'w') as f:
+        f.create_dataset("landmarks", data=np.array(landmarks, dtype='float32'))
+        f.create_dataset("labels", data=np.array(labels, dtype='int64'))
 
 
 def calculateModelAccuracy(model: nn.Module, test_data: DataLoader) -> (float, np.ndarray):
@@ -164,8 +167,6 @@ def displayConfusionMatrix(conf_matrix: np.ndarray) -> plt.Figure:
             ax.text(j, i, conf_matrix[i, j], ha="center", va="center")
 
     return fig
-
-
 
 def train(model: nn.Module, train_data: DataLoader, test_data: DataLoader, epochs: int) -> None:
     # Define the loss function
